@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Completar Denominaciones CUIT</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: Arial, sans-serif;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      background: #f0f2f5;
+    }
+    .card {
+      background: white;
+      border-radius: 8px;
+      padding: 40px;
+      box-shadow: 0 2px 12px rgba(0,0,0,0.1);
+      width: 100%;
+      max-width: 520px;
+      text-align: center;
+    }
+    h1 { font-size: 1.4rem; margin-bottom: 8px; color: #1a1a1a; }
+    p.subtitle { color: #666; font-size: 0.9rem; margin-bottom: 28px; }
+    .drop-zone {
+      border: 2px dashed #ccc;
+      border-radius: 6px;
+      padding: 32px;
+      cursor: pointer;
+      margin-bottom: 20px;
+      transition: border-color 0.2s;
+    }
+    .drop-zone:hover { border-color: #4a90e2; }
+    .drop-zone.has-file { border-color: #27ae60; background: #f0fff4; }
+    .drop-zone p { color: #888; font-size: 0.9rem; }
+    .drop-zone p.filename { color: #27ae60; font-weight: bold; }
+    input[type="file"] { display: none; }
+    button {
+      width: 100%;
+      padding: 12px;
+      background: #4a90e2;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      font-size: 1rem;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    button:hover:not(:disabled) { background: #357abd; }
+    button:disabled { background: #aaa; cursor: not-allowed; }
+
+    /* Progress section */
+    #progreso {
+      display: none;
+      margin-top: 20px;
+      text-align: left;
+    }
+    .progress-header {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.85rem;
+      color: #555;
+      margin-bottom: 6px;
+    }
+    .progress-bar-track {
+      background: #e9ecef;
+      border-radius: 4px;
+      height: 10px;
+      overflow: hidden;
+      margin-bottom: 12px;
+    }
+    .progress-bar-fill {
+      height: 100%;
+      background: #4a90e2;
+      border-radius: 4px;
+      width: 0%;
+      transition: width 0.3s ease;
+    }
+    .progress-bar-fill.done { background: #27ae60; }
+    .log {
+      background: #f8f9fa;
+      border: 1px solid #e9ecef;
+      border-radius: 4px;
+      padding: 10px 12px;
+      font-size: 0.78rem;
+      font-family: monospace;
+      max-height: 140px;
+      overflow-y: auto;
+      color: #333;
+    }
+    .log-entry { padding: 1px 0; }
+    .log-entry .cuit { color: #888; }
+    .log-entry .denom { color: #1a1a1a; font-weight: bold; }
+    .log-entry .no-encontrado { color: #e67e22; }
+
+    #status {
+      margin-top: 16px;
+      font-size: 0.9rem;
+      color: #555;
+      min-height: 20px;
+    }
+    #status.error { color: #e74c3c; }
+    #status.success { color: #27ae60; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h1>Completar Denominaciones</h1>
+    <p class="subtitle">Subí el Excel con CUITs en columna A — se completan las denominaciones vacías en columna B.</p>
+
+    <div class="drop-zone" id="dropZone">
+      <p id="dropText">Hacé clic o arrastrá un archivo .xlsx aquí</p>
+      <input type="file" id="fileInput" accept=".xlsx">
+    </div>
+
+    <button id="btn" disabled>Procesar</button>
+
+    <div id="progreso">
+      <div class="progress-header">
+        <span id="progresoTexto">Iniciando...</span>
+        <span id="progresoPorc">0%</span>
+      </div>
+      <div class="progress-bar-track">
+        <div class="progress-bar-fill" id="progressFill"></div>
+      </div>
+      <div class="log" id="log"></div>
+    </div>
+
+    <div id="status"></div>
+  </div>
+
+  <script>
+    const dropZone = document.getElementById('dropZone');
+    const fileInput = document.getElementById('fileInput');
+    const dropText = document.getElementById('dropText');
+    const btn = document.getElementById('btn');
+    const status = document.getElementById('status');
+    const progresoDiv = document.getElementById('progreso');
+    const progresoTexto = document.getElementById('progresoTexto');
+    const progresoPorc = document.getElementById('progresoPorc');
+    const progressFill = document.getElementById('progressFill');
+    const log = document.getElementById('log');
+
+    let selectedFile = null;
+
+    dropZone.addEventListener('click', () => fileInput.click());
+    dropZone.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      dropZone.style.borderColor = '#4a90e2';
+    });
+    dropZone.addEventListener('dragleave', () => {
+      dropZone.style.borderColor = selectedFile ? '#27ae60' : '#ccc';
+    });
+    dropZone.addEventListener('drop', (e) => {
+      e.preventDefault();
+      const file = e.dataTransfer.files[0];
+      if (file && file.name.endsWith('.xlsx')) setFile(file);
+      else setStatus('Solo se aceptan archivos .xlsx', 'error');
+    });
+    fileInput.addEventListener('change', () => {
+      if (fileInput.files[0]) setFile(fileInput.files[0]);
+    });
+
+    function setFile(file) {
+      selectedFile = file;
+      dropZone.classList.add('has-file');
+      dropText.textContent = file.name;
+      dropText.className = 'filename';
+      btn.disabled = false;
+      setStatus('');
+    }
+
+    function setStatus(msg, type = '') {
+      status.textContent = msg;
+      status.className = type;
+    }
+
+    function setProgress(actual, total) {
+      const pct = total > 0 ? Math.round((actual / total) * 100) : 0;
+      progressFill.style.width = pct + '%';
+      progresoTexto.textContent = `${actual} de ${total} CUITs procesados`;
+      progresoPorc.textContent = pct + '%';
+    }
+
+    function addLog(cuit, denom) {
+      const entry = document.createElement('div');
+      entry.className = 'log-entry';
+      const denomClass = denom === 'NO ENCONTRADO' ? 'no-encontrado' : 'denom';
+      entry.innerHTML = `<span class="cuit">${cuit}</span> → <span class="${denomClass}">${denom || '(vacío)'}</span>`;
+      log.appendChild(entry);
+      log.scrollTop = log.scrollHeight;
+    }
+
+    btn.addEventListener('click', async () => {
+      if (!selectedFile) return;
+
+      btn.disabled = true;
+      setStatus('');
+      log.innerHTML = '';
+      progresoDiv.style.display = 'block';
+      progressFill.classList.remove('done');
+      setProgress(0, 1);
+      progresoTexto.textContent = 'Conectando...';
+      progresoPorc.textContent = '0%';
+
+      const formData = new FormData();
+      formData.append('file', selectedFile);
+
+      try {
+        const response = await fetch('/procesar', { method: 'POST', body: formData });
+
+        if (!response.ok) {
+          const err = await response.json();
+          throw new Error(err.detail || 'Error desconocido');
+        }
+
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder();
+        let buffer = '';
+        let nombreArchivo = 'resultado.xlsx';
+
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+
+          buffer += decoder.decode(value, { stream: true });
+          const lines = buffer.split('\n');
+          buffer = lines.pop();
+
+          for (const line of lines) {
+            if (!line.startsWith('data: ')) continue;
+            let evento;
+            try { evento = JSON.parse(line.slice(6)); } catch { continue; }
+
+            if (evento.tipo === 'inicio') {
+              nombreArchivo = evento.nombre;
+              progresoTexto.textContent = 'Procesando...';
+
+            } else if (evento.tipo === 'progreso') {
+              setProgress(evento.actual, evento.total);
+              addLog(evento.cuit, evento.denom);
+
+            } else if (evento.tipo === 'listo') {
+              progressFill.classList.add('done');
+              setProgress(evento.actual ?? 0, evento.total ?? 0);
+              progresoTexto.textContent = '¡Completado!';
+              progresoPorc.textContent = '100%';
+              progressFill.style.width = '100%';
+
+              // Decode base64 and trigger download
+              const binary = atob(evento.archivo_b64);
+              const bytes = new Uint8Array(binary.length);
+              for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+              const blob = new Blob([bytes], {
+                type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+              });
+              const url = URL.createObjectURL(blob);
+              const a = document.createElement('a');
+              a.href = url;
+              a.download = evento.nombre || nombreArchivo;
+              a.click();
+              URL.revokeObjectURL(url);
+              setStatus('Listo. El archivo se descargó automáticamente.', 'success');
+
+            } else if (evento.tipo === 'error') {
+              throw new Error(evento.mensaje);
+            }
+          }
+        }
+      } catch (err) {
+        setStatus('Error: ' + err.message, 'error');
+        progresoDiv.style.display = 'none';
+      } finally {
+        btn.disabled = false;
+      }
+    });
+  </script>
+</body>
+</html>
