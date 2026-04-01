@@ -5,10 +5,6 @@ from excel import procesar_excel
 
 
 def _make_workbook(rows: list) -> bytes:
-    """
-    Crea un workbook mínimo con encabezados en fila 13 y datos desde fila 15.
-    rows: lista de (cuit, denominacion) para insertar desde fila 15.
-    """
     wb = openpyxl.Workbook()
     ws = wb.active
     ws["A13"] = "CUIT\nDonante/\nDonatario"
@@ -22,9 +18,13 @@ def _make_workbook(rows: list) -> bytes:
     return buf.getvalue()
 
 
+def _mock_resolve(cuits, max_workers=12):
+    return {c: "PEREZ JUAN" for c in cuits}
+
+
 def test_fills_empty_denominacion():
     file_bytes = _make_workbook([(20123456789, None)])
-    with patch("excel.get_denominacion", return_value="PEREZ JUAN"):
+    with patch("excel.resolve_cuits_parallel", side_effect=_mock_resolve):
         result = procesar_excel(file_bytes)
     wb = openpyxl.load_workbook(io.BytesIO(result))
     ws = wb.active
@@ -33,9 +33,9 @@ def test_fills_empty_denominacion():
 
 def test_does_not_overwrite_existing_denominacion():
     file_bytes = _make_workbook([(30712505873, "CIGARS SONS S.R.L.")])
-    with patch("excel.get_denominacion") as mock_get:
+    with patch("excel.resolve_cuits_parallel") as mock_r:
         result = procesar_excel(file_bytes)
-    mock_get.assert_not_called()
+    mock_r.assert_not_called()
     wb = openpyxl.load_workbook(io.BytesIO(result))
     ws = wb.active
     assert ws.cell(15, 2).value == "CIGARS SONS S.R.L."
@@ -43,16 +43,18 @@ def test_does_not_overwrite_existing_denominacion():
 
 def test_skips_row_with_empty_cuit():
     file_bytes = _make_workbook([(None, None)])
-    with patch("excel.get_denominacion") as mock_get:
+    with patch("excel.resolve_cuits_parallel") as mock_r:
         result = procesar_excel(file_bytes)
-    mock_get.assert_not_called()
+    mock_r.assert_not_called()
 
 
 def test_converts_integer_cuit_to_string():
     file_bytes = _make_workbook([(20123456789, None)])
-    with patch("excel.get_denominacion", return_value="GARCIA") as mock_get:
+    with patch("excel.resolve_cuits_parallel") as mock_r:
+        mock_r.return_value = {"20123456789": "GARCIA"}
         procesar_excel(file_bytes)
-    mock_get.assert_called_once_with("20123456789")
+    mock_r.assert_called_once()
+    assert mock_r.call_args[0][0] == ["20123456789"]
 
 
 def test_preserves_other_columns():
@@ -68,7 +70,7 @@ def test_preserves_other_columns():
     wb.save(buf)
     file_bytes = buf.getvalue()
 
-    with patch("excel.get_denominacion", return_value="GARCIA"):
+    with patch("excel.resolve_cuits_parallel", side_effect=_mock_resolve):
         result = procesar_excel(file_bytes)
 
     wb2 = openpyxl.load_workbook(io.BytesIO(result))
