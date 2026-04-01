@@ -5,120 +5,291 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Completar Denominaciones CUIT</title>
   <style>
-    * { box-sizing: border-box; margin: 0; padding: 0; }
-    body {
-      font-family: Arial, sans-serif;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      min-height: 100vh;
-      background: #f0f2f5;
+    @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&display=swap');
+
+    :root {
+      --bg: #eef2f6;
+      --bg-accent: #dde6f1;
+      --surface: #ffffff;
+      --surface-soft: #f8fafc;
+      --text: #132238;
+      --text-soft: #5f6f82;
+      --primary: #1d4f7a;
+      --primary-strong: #163e60;
+      --primary-soft: #e9f2fb;
+      --success: #1f7a4d;
+      --warning: #b26b15;
+      --danger: #b42318;
+      --line: #d4dde7;
+      --focus: #0d6efd;
+      --radius-lg: 18px;
+      --radius-md: 12px;
+      --radius-sm: 10px;
+      --shadow-lg: 0 24px 60px rgba(19, 34, 56, 0.14);
+      --shadow-md: 0 10px 24px rgba(19, 34, 56, 0.08);
     }
-    .card {
-      background: white;
-      border-radius: 8px;
-      padding: 40px;
-      box-shadow: 0 2px 12px rgba(0,0,0,0.1);
-      width: 100%;
-      max-width: 520px;
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'IBM Plex Sans', sans-serif;
+      color: var(--text);
+      min-height: 100vh;
+      display: grid;
+      place-items: center;
+      padding: 24px;
+      background:
+        radial-gradient(circle at 15% 10%, var(--bg-accent), transparent 35%),
+        radial-gradient(circle at 85% 90%, #d9e5ef, transparent 30%),
+        linear-gradient(180deg, #f5f8fb 0%, var(--bg) 100%);
+    }
+
+    .app-shell {
+      width: min(760px, 100%);
+      background: var(--surface);
+      border: 1px solid rgba(29, 79, 122, 0.12);
+      border-radius: var(--radius-lg);
+      padding: 34px;
+      box-shadow: var(--shadow-lg);
+      position: relative;
+      overflow: hidden;
+      isolation: isolate;
+    }
+
+    .app-shell::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background:
+        radial-gradient(circle at 90% 0%, rgba(29, 79, 122, 0.09), transparent 25%),
+        radial-gradient(circle at 0% 100%, rgba(29, 79, 122, 0.08), transparent 26%);
+      z-index: -1;
+    }
+
+    .eyebrow {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 10px;
+      border-radius: 999px;
+      background: var(--primary-soft);
+      color: var(--primary);
+      font-size: 0.78rem;
+      font-weight: 600;
+      letter-spacing: 0.01em;
+      margin-bottom: 14px;
+    }
+
+    h1 {
+      font-size: clamp(1.45rem, 2.5vw, 2rem);
+      line-height: 1.2;
+      margin-bottom: 10px;
+      color: var(--text);
+      font-weight: 700;
+    }
+
+    p.subtitle {
+      color: var(--text-soft);
+      font-size: 0.98rem;
+      line-height: 1.55;
+      margin-bottom: 22px;
+      max-width: 60ch;
+    }
+
+    .trust-strip {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 10px;
+      margin-bottom: 24px;
+    }
+
+    .trust-pill {
+      border: 1px solid var(--line);
+      background: var(--surface-soft);
+      border-radius: var(--radius-sm);
+      padding: 10px;
+      font-size: 0.8rem;
+      color: #32465e;
+      font-weight: 500;
       text-align: center;
     }
-    h1 { font-size: 1.4rem; margin-bottom: 8px; color: #1a1a1a; }
-    p.subtitle { color: #666; font-size: 0.9rem; margin-bottom: 28px; }
+
     .drop-zone {
-      border: 2px dashed #ccc;
-      border-radius: 6px;
-      padding: 32px;
+      border: 1.5px dashed #9db0c4;
+      border-radius: var(--radius-md);
+      padding: 30px;
       cursor: pointer;
-      margin-bottom: 20px;
-      transition: border-color 0.2s;
+      margin-bottom: 16px;
+      transition: border-color 0.2s, background-color 0.2s, transform 0.2s;
+      background: linear-gradient(180deg, #fbfdff 0%, #f4f8fc 100%);
+      text-align: center;
+      outline: none;
     }
-    .drop-zone:hover { border-color: #4a90e2; }
-    .drop-zone.has-file { border-color: #27ae60; background: #f0fff4; }
-    .drop-zone p { color: #888; font-size: 0.9rem; }
-    .drop-zone p.filename { color: #27ae60; font-weight: bold; }
+
+    .drop-zone:hover { border-color: var(--primary); transform: translateY(-1px); }
+
+    .drop-zone:focus-visible,
+    button:focus-visible {
+      box-shadow: 0 0 0 3px rgba(13, 110, 253, 0.2);
+      outline: 2px solid var(--focus);
+      outline-offset: 2px;
+    }
+
+    .drop-zone.has-file {
+      border-color: var(--success);
+      background: #effbf3;
+    }
+
+    .drop-zone p { color: var(--text-soft); font-size: 0.95rem; }
+
+    .drop-zone p.filename {
+      color: var(--success);
+      font-weight: 600;
+      word-break: break-word;
+    }
+
     input[type="file"] { display: none; }
+
+    .actions {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 10px;
+    }
+
     button {
       width: 100%;
-      padding: 12px;
-      background: #4a90e2;
+      padding: 13px 14px;
+      background: var(--primary);
       color: white;
       border: none;
-      border-radius: 6px;
+      border-radius: var(--radius-sm);
       font-size: 1rem;
+      font-weight: 600;
+      letter-spacing: 0.01em;
       cursor: pointer;
-      transition: background 0.2s;
+      transition: background 0.2s, transform 0.15s;
     }
-    button:hover:not(:disabled) { background: #357abd; }
-    button:disabled { background: #aaa; cursor: not-allowed; }
 
-    /* Progress section */
+    button:hover:not(:disabled) { background: var(--primary-strong); }
+
+    button:active:not(:disabled) { transform: translateY(1px); }
+
+    button:disabled {
+      background: #9db0c1;
+      cursor: not-allowed;
+    }
+
     #progreso {
       display: none;
-      margin-top: 20px;
+      margin-top: 18px;
       text-align: left;
+      border: 1px solid var(--line);
+      background: var(--surface-soft);
+      border-radius: var(--radius-md);
+      padding: 14px;
     }
+
     .progress-header {
       display: flex;
       justify-content: space-between;
-      font-size: 0.85rem;
-      color: #555;
-      margin-bottom: 6px;
+      font-size: 0.86rem;
+      color: #405770;
+      margin-bottom: 8px;
+      gap: 10px;
     }
+
     .progress-bar-track {
-      background: #e9ecef;
-      border-radius: 4px;
-      height: 10px;
+      background: #dce4ec;
+      border-radius: 999px;
+      height: 11px;
       overflow: hidden;
-      margin-bottom: 12px;
+      margin-bottom: 10px;
     }
+
     .progress-bar-fill {
       height: 100%;
-      background: #4a90e2;
-      border-radius: 4px;
+      background: linear-gradient(90deg, #26699f, #1d4f7a);
+      border-radius: 999px;
       width: 0%;
       transition: width 0.3s ease;
     }
-    .progress-bar-fill.done { background: #27ae60; }
+
+    .progress-bar-fill.done { background: linear-gradient(90deg, #219f63, #1f7a4d); }
+
     .log {
-      background: #f8f9fa;
-      border: 1px solid #e9ecef;
-      border-radius: 4px;
+      background: #fbfdff;
+      border: 1px solid #dbe5ee;
+      border-radius: 8px;
       padding: 10px 12px;
-      font-size: 0.78rem;
+      font-size: 0.8rem;
       font-family: monospace;
       max-height: 140px;
       overflow-y: auto;
-      color: #333;
+      color: #2c3e54;
     }
+
     .log-entry { padding: 1px 0; }
-    .log-entry .cuit { color: #888; }
-    .log-entry .denom { color: #1a1a1a; font-weight: bold; }
-    .log-entry .no-encontrado { color: #e67e22; }
+
+    .log-entry .cuit { color: #607288; }
+
+    .log-entry .denom { color: #1b2d44; font-weight: 600; }
+
+    .log-entry .no-encontrado { color: var(--warning); }
 
     #status {
-      margin-top: 16px;
-      font-size: 0.9rem;
-      color: #555;
-      min-height: 20px;
+      margin-top: 14px;
+      font-size: 0.88rem;
+      color: #475c73;
+      min-height: 22px;
+      line-height: 1.4;
     }
-    #status.error { color: #e74c3c; }
-    #status.success { color: #27ae60; }
+
+    #status.error { color: var(--danger); }
+
+    #status.success { color: var(--success); }
+
+    @media (max-width: 780px) {
+      .app-shell {
+        padding: 24px 18px;
+        border-radius: 14px;
+      }
+
+      .trust-strip {
+        grid-template-columns: 1fr;
+      }
+
+      .drop-zone {
+        padding: 22px 14px;
+      }
+
+      p.subtitle {
+        font-size: 0.94rem;
+      }
+    }
   </style>
 </head>
 <body>
-  <div class="card">
-    <h1>Completar Denominaciones</h1>
-    <p class="subtitle">Subí el Excel con CUITs en columna A — se completan las denominaciones vacías en columna B.</p>
+  <main class="app-shell">
+    <span class="eyebrow">Estudio Contable · Automatización Segura</span>
+    <h1>Completar denominaciones por CUIT en segundos</h1>
+    <p class="subtitle">Subí tu archivo Excel y completá automáticamente las denominaciones faltantes en columna B. Flujo optimizado para uso diario en estudios contables.</p>
 
-    <div class="drop-zone" id="dropZone">
+    <div class="trust-strip" aria-hidden="true">
+      <div class="trust-pill">Carga simple .xlsx</div>
+      <div class="trust-pill">Seguimiento en tiempo real</div>
+      <div class="trust-pill">Descarga inmediata</div>
+    </div>
+
+    <div class="drop-zone" id="dropZone" role="button" tabindex="0" aria-label="Seleccionar archivo Excel">
       <p id="dropText">Hacé clic o arrastrá un archivo .xlsx aquí</p>
       <input type="file" id="fileInput" accept=".xlsx">
     </div>
 
-    <button id="btn" disabled>Procesar</button>
+    <div class="actions">
+      <button id="btn" disabled>Procesar archivo</button>
+    </div>
 
-    <div id="progreso">
+    <section id="progreso" aria-live="polite">
       <div class="progress-header">
         <span id="progresoTexto">Iniciando...</span>
         <span id="progresoPorc">0%</span>
@@ -127,10 +298,10 @@
         <div class="progress-bar-fill" id="progressFill"></div>
       </div>
       <div class="log" id="log"></div>
-    </div>
+    </section>
 
-    <div id="status"></div>
-  </div>
+    <div id="status" role="status" aria-live="polite"></div>
+  </main>
 
   <script>
     const dropZone = document.getElementById('dropZone');
@@ -147,12 +318,18 @@
     let selectedFile = null;
 
     dropZone.addEventListener('click', () => fileInput.click());
+    dropZone.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        fileInput.click();
+      }
+    });
     dropZone.addEventListener('dragover', (e) => {
       e.preventDefault();
-      dropZone.style.borderColor = '#4a90e2';
+      dropZone.style.borderColor = '#1d4f7a';
     });
     dropZone.addEventListener('dragleave', () => {
-      dropZone.style.borderColor = selectedFile ? '#27ae60' : '#ccc';
+      dropZone.style.borderColor = selectedFile ? '#1f7a4d' : '#9db0c4';
     });
     dropZone.addEventListener('drop', (e) => {
       e.preventDefault();
